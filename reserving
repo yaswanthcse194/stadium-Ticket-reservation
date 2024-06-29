@@ -1,0 +1,157 @@
+#Python online ticket booking platform
+
+import pickle
+
+class Ticket:
+    def __init__(self, seat_number, row, name=None):
+        self.seat_number = seat_number
+        self.row = row
+        self.name = name
+
+    def reserve(self, name):
+        self.name = name
+
+    def cancel_reservation(self):
+        self.name = None
+
+    def is_reserved(self):
+        return self.name is not None
+
+    def __str__(self):
+        return "X" if self.is_reserved() else f"{self.seat_number}"
+
+class Stadium:
+    def __init__(self, rows=10, seats_per_row=10):
+        self.rows = rows
+        self.seats_per_row = seats_per_row
+        self.tickets = [
+            Ticket(seat_number=j + 1, row=chr(65 + i))
+            for i in range(rows)
+            for j in range(seats_per_row)
+        ]
+        self.prices = {
+            'A': 2000, 'B': 2000, 'C': 2000, 'D': 2000,
+            'E': 1500, 'F': 1500, 'G': 1500, 'H': 1500,
+            'I': 800, 'J': 800
+        }
+
+    def view_seats(self):
+        print("\nAvailable Seats:")
+        row_map = {chr(65 + i): [] for i in range(self.rows)}
+        for ticket in self.tickets:
+            row_map[ticket.row].append(ticket)
+
+        for row in sorted(row_map.keys()):
+            print(f"Row {row}: ", end="")
+            for ticket in row_map[row]:
+                print(f"{str(ticket)}", end="    ")  # More spacing between seats
+            print()  # Newline at the end of each row
+
+    def reserve_ticket(self, row, seat_number, name):
+        ticket = next(
+            (t for t in self.tickets if t.row == row and t.seat_number == seat_number), None
+        )
+        if not ticket:
+            print(f"Invalid seat {row}{seat_number}.")
+            return 0
+        elif ticket.is_reserved():
+            print(f"Seat {row}{seat_number} is already reserved.")
+            return 0
+        else:
+            ticket.reserve(name)
+            print(f"Seat {row}{seat_number} has been reserved for {name}.")
+            return self.prices[row]
+
+    def delete_ticket(self, row, seat_number):
+        ticket = next(
+            (t for t in self.tickets if t.row == row and t.seat_number == seat_number), None
+        )
+        if not ticket:
+            print(f"Invalid seat {row}{seat_number}.")
+        elif not ticket.is_reserved():
+            print(f"Seat {row}{seat_number} is not reserved.")
+        else:
+            ticket.cancel_reservation()
+            print(f"Reservation for seat {row}{seat_number} has been canceled.")
+
+    def reserve_multiple_tickets(self, seats, name):
+        total_cost = 0
+        for seat in seats:
+            row = seat[0]
+            seat_number = int(seat[1:])
+            cost = self.reserve_ticket(row, seat_number, name)
+            total_cost += cost
+        return total_cost
+
+    def delete_multiple_tickets(self, seats):
+        for seat in seats:
+            row = seat[0]
+            seat_number = int(seat[1:])
+            self.delete_ticket(row, seat_number)
+
+    def view_reservations(self):
+        reservations = [ticket for ticket in self.tickets if ticket.is_reserved()]
+        if not reservations:
+            print("No reservations.")
+        else:
+            print("\nReserved Seats:")
+            for ticket in reservations:
+                print(f"Seat {ticket.row}{ticket.seat_number} reserved by {ticket.name}")
+
+    def view_prices(self):
+        print("\nTicket Prices:")
+        print("Rows A-D: 2000")
+        print("Rows E-H: 1500")
+        print("Rows I-J: 800")
+
+    def save_data(self, filename="stadium_reservations.pkl"):
+        with open(filename, "wb") as file:
+            pickle.dump(self, file)
+
+    @staticmethod
+    def load_data(filename="stadium_reservations.pkl"):
+        try:
+            with open(filename, "rb") as file:
+                return pickle.load(file)
+        except FileNotFoundError:
+            return None
+
+def main():
+    stadium = Stadium.load_data()
+    if stadium is None:
+        stadium = Stadium(rows=10, seats_per_row=10)
+
+    while True:
+        print("\n1. View Seats")
+        print("2. Reserve Ticket(s)")
+        print("3. View Prices")
+        print("4. View Reservations")
+        print("5. Delete Reservation")
+        print("6. Exit")
+
+        choice = input("\nEnter your choice: ")
+
+        if choice == "1":
+            stadium.view_seats()
+        elif choice == "2":
+            seats = input("Enter seats to reserve (e.g., A1 A2 B3): ").upper().split()
+            name = input("Enter your name: ")
+            total_cost = stadium.reserve_multiple_tickets(seats, name)
+            if total_cost > 0:
+                print(f"Total cost for reserved seats: {total_cost}")
+        elif choice == "3":
+            stadium.view_prices()
+        elif choice == "4":
+            stadium.view_reservations()
+        elif choice == "5":
+            seats = input("Enter seats to delete reservation (e.g., A1 A2 B3): ").upper().split()
+            stadium.delete_multiple_tickets(seats)
+        elif choice == "6":
+            stadium.save_data()
+            print("Data saved. Exiting the system.")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+if __name__ == "__main__":
+    main()
